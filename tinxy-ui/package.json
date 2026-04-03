@@ -1,0 +1,12 @@
+{
+  "name": "tinxy-ui",
+  "version": "1.0.0",
+  "description": "Tinxy light control web UI",
+  "main": "serve.js",
+  "scripts": {
+    "start": "node serve.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
