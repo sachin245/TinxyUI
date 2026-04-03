@@ -440,7 +440,9 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
+const DEFAULT_TOKEN = '75fc99d0c8e9bf96c3098b195ff8ef145e9c14f8';
+
 (function init() {
-  const saved = localStorage.getItem(TOKEN_KEY);
-  if (saved) { apiToken = saved; switchToDashboard(); }
+  const saved = localStorage.getItem(TOKEN_KEY) || DEFAULT_TOKEN;
+  if (saved) { saveToken(saved); switchToDashboard(); }
 })();
