@@ -147,9 +147,12 @@ function getNodeCount(device) {
 }
 
 function getNodeName(device, idx) {
-  return (Array.isArray(device.devices) && device.devices[idx])
-    ? device.devices[idx]
-    : `Switch ${idx + 1}`;
+  if (Array.isArray(device.devices) && device.devices[idx])
+    return device.devices[idx];
+  // Single-node device: use the device name instead of generic "Switch 1"
+  if (getNodeCount(device) === 1 && device.name)
+    return device.name;
+  return `Switch ${idx + 1}`;
 }
 
 function isFanNode(device, idx) {
