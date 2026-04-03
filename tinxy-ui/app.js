@@ -169,6 +169,12 @@ function nodeIcon(device, idx) {
 }
 
 // ── Load devices ──────────────────────────────────────────────────────────────
+// ── Device grouping config ────────────────────────────────────────────────────
+// Devices whose names appear in a group's `match` array are merged into one card.
+const DEVICE_GROUPS = [
+  { groupName: 'Sachin Room', match: ['Sachin Room', 'Laptop'] },
+];
+
 async function loadDevices() {
   stopPolling();
   clearRegistry();
@@ -197,8 +203,23 @@ async function loadDevices() {
   }
 
   setView('grid');
+
+  // Track which devices have been rendered as part of a group
+  const renderedIds = new Set();
+
+  for (const group of DEVICE_GROUPS) {
+    const members = devices.filter(d => group.match.includes(d.name || ''));
+    if (members.length > 0) {
+      members.forEach(d => renderedIds.add(d._id));
+      devicesGrid.appendChild(buildGroupedCard(group.groupName, members));
+    }
+  }
+
+  // Render remaining devices individually
   for (const device of devices) {
-    devicesGrid.appendChild(buildDeviceCard(device));
+    if (!renderedIds.has(device._id)) {
+      devicesGrid.appendChild(buildDeviceCard(device));
+    }
   }
 
   startPolling();
@@ -239,6 +260,67 @@ function buildDeviceCard(device) {
       ? buildFanRow(device, i, nodeStates, refreshCard)
       : buildSwitchRow(device, i, nodeStates, refreshCard);
     container.appendChild(row);
+  }
+
+  return card;
+}
+
+// ── Grouped device card (multiple devices in one box) ─────────────────────────
+function buildGroupedCard(groupName, deviceList) {
+  const frag = deviceCardTpl.content.cloneNode(true);
+  const card = frag.querySelector('.device-card');
+
+  card.querySelector('.device-name').textContent = groupName;
+  card.querySelector('.device-type').textContent =
+    deviceList.map(d => d.typeId?.long_name || d.typeId?.name || 'Switch').join(' · ');
+
+  const badge = card.querySelector('.device-badge');
+  badge.textContent = '…';
+  badge.className   = 'device-badge loading';
+
+  const container = card.querySelector('.device-nodes');
+
+  // Collect all node states across all devices for the shared badge
+  const allStates = [];
+
+  function refreshGroupCard() {
+    card.classList.toggle('card-on', allStates.some(Boolean));
+    const onCount    = allStates.filter(Boolean).length;
+    const totalCount = allStates.length;
+    if (totalCount === 1) {
+      badge.textContent = allStates[0] ? 'ON' : 'OFF';
+      badge.className   = `device-badge ${allStates[0] ? 'on' : 'off'}`;
+    } else {
+      badge.textContent = onCount > 0 ? `${onCount}/${totalCount} ON` : 'ALL OFF';
+      badge.className   = `device-badge ${onCount > 0 ? 'on' : 'off'}`;
+    }
+  }
+
+  let stateOffset = 0;
+  for (const device of deviceList) {
+    const nodeCount  = getNodeCount(device);
+    const nodeStates = new Array(nodeCount).fill(false);
+    const offset     = stateOffset;
+
+    // Sync per-device nodeStates into the shared allStates array
+    for (let i = 0; i < nodeCount; i++) allStates.push(false);
+
+    function makeRefresh(ns, off, nc) {
+      return function () {
+        for (let i = 0; i < nc; i++) allStates[off + i] = ns[i];
+        refreshGroupCard();
+      };
+    }
+    const refresh = makeRefresh(nodeStates, offset, nodeCount);
+
+    for (let i = 0; i < nodeCount; i++) {
+      const row = isFanNode(device, i)
+        ? buildFanRow(device, i, nodeStates, refresh)
+        : buildSwitchRow(device, i, nodeStates, refresh);
+      container.appendChild(row);
+    }
+
+    stateOffset += nodeCount;
   }
 
   return card;
