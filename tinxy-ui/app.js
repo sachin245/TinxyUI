@@ -306,19 +306,18 @@ function buildSwitchRow(device, idx, nodeStates, refreshCard) {
 
 // ── Fan row ───────────────────────────────────────────────────────────────────
 const FAN_SPEEDS = [
-  { label: 'Off',  state: 0, brightness: 0 },
-  { label: 'Low',  state: 1, brightness: 1 },
-  { label: 'Med',  state: 1, brightness: 2 },
-  { label: 'High', state: 1, brightness: 3 },
+  { label: 'Off',  state: 0, brightness: 0   },
+  { label: 'Low',  state: 1, brightness: 33  },
+  { label: 'Med',  state: 1, brightness: 66  },
+  { label: 'High', state: 1, brightness: 100 },
 ];
 
 /**
  * Map brightness value to speed index 0-3.
- * Toggle command uses raw 1/2/3; state API returns percentages 33/66/100.
+ * Both toggle and state API use percentages: 33=Low, 66=Med, 100=High.
  */
 function brightnessToSpeed(isOn, brightness) {
   if (!isOn || brightness === 0) return 0;
-  if (brightness <= 3)   return brightness;       // raw 1/2/3
   if (brightness <= 40)  return 1;                // ~33%
   if (brightness <= 75)  return 2;                // ~66%
   return 3;                                        // ~100%
