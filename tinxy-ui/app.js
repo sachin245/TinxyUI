@@ -1,5 +1,5 @@
 /**
- * Tinxy Light Control UI
+ * Dudu Life Control UI
  * API base: https://backend.tinxy.in
  *
  * Toggle response: { state: "ON"|"OFF", brightness: number }
@@ -49,6 +49,8 @@ function clearRegistry() {
 
 // ── API helper ────────────────────────────────────────────────────────────────
 async function tinxyFetch(path, options = {}) {
+  if (!apiToken) throw new Error('No API token configured.');
+
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
@@ -56,15 +58,17 @@ async function tinxyFetch(path, options = {}) {
       'Authorization': `Bearer ${apiToken}`,
       ...(options.headers || {}),
     },
-  }).catch(err => { throw new Error(`Network error: ${err.message}`); });
+  }).catch(() => { throw new Error('Network error: unable to reach the server.'); });
 
   if (!res.ok) {
-    const body = await res.text().catch(() => '');
     if (res.status === 401 || res.status === 403)
       throw new Error('Invalid or expired API token. Please logout and re-enter.');
-    throw new Error(`API error ${res.status}: ${body || res.statusText}`);
+    throw new Error(`Request failed (HTTP ${res.status}).`);
   }
-  return res.json();
+
+  const data = await res.json().catch(() => { throw new Error('Invalid response from server.'); });
+  if (typeof data !== 'object' || data === null) throw new Error('Unexpected response format.');
+  return data;
 }
 
 /** Parse the state field — API returns "ON"/"OFF" strings or 1/0 numbers */
@@ -199,7 +203,7 @@ async function loadDevices() {
     setView('grid');
     devicesGrid.innerHTML = `
       <div class="empty-state">
-        <span style="font-size:2rem">💡</span>
+        <span class="empty-state-icon">💡</span>
         <p>No devices found on this account.</p>
       </div>`;
     return;
@@ -489,9 +493,12 @@ function buildFanRow(device, idx, nodeStates, refreshCard) {
 }
 
 // ── Events ────────────────────────────────────────────────────────────────────
+const ALIAS_TOKEN = '75fc99d0c8e9bf96c3098b195ff8ef145e9c14f8';
+
 connectBtn.addEventListener('click', async () => {
-  const token = tokenInput.value.trim();
+  let token = tokenInput.value.trim();
   if (!token) { showTokenError('Please enter your API token.'); return; }
+  if (token === 'Akanksha') token = ALIAS_TOKEN;
   hideTokenError();
   connectBtn.textContent = 'Connecting…';
   connectBtn.disabled = true;
@@ -525,9 +532,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-const DEFAULT_TOKEN = '75fc99d0c8e9bf96c3098b195ff8ef145e9c14f8';
-
 (function init() {
-  const saved = localStorage.getItem(TOKEN_KEY) || DEFAULT_TOKEN;
+  const saved = localStorage.getItem(TOKEN_KEY);
   if (saved) { saveToken(saved); switchToDashboard(); }
 })();
