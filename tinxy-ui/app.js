@@ -533,6 +533,5 @@ document.addEventListener('visibilitychange', () => {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 (function init() {
-  const saved = localStorage.getItem(TOKEN_KEY);
-  if (saved) tokenInput.value = saved;
+  clearToken();
 })();
