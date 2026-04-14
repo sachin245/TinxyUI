@@ -1,7 +1,7 @@
 {
   "name": "tinxy-ui",
   "version": "1.0.0",
-  "description": "Tinxy light control web UI",
+  "description": "Dudu Life Control web UI",
   "main": "serve.js",
   "scripts": {
     "start": "node serve.js"
