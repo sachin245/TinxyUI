@@ -121,7 +121,7 @@ PM2 config file: `/home/ec2-user/TinxyUI/ecosystem.config.js`
 
 - **Domain:** `54-91-145-63.nip.io` (nip.io maps IP → domain so Let's Encrypt works on raw IPs)
 - **Cert path:** `/etc/letsencrypt/live/54-91-145-63.nip.io/`
-- **Expires:** TBD — re-issued for new IP (auto-renews via certbot systemd timer)
+- **Expires:** 2026-07-25 (auto-renews via certbot systemd timer)
 - **Registered email:** `sac.khurana@gmail.com`
 
 ### If the EC2 IP changes — re-issue cert for new IP:
