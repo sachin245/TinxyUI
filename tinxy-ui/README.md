@@ -2,7 +2,7 @@
 
 A lightweight, zero-dependency web dashboard for controlling [Tinxy](https://tinxy.in) smart home devices — fans, lights, and sockets — from any browser.
 
-**Live (EC2):** http://107.23.227.77
+**Live (EC2):** http://54.91.145.63
 **Local dev:** http://localhost:3456
 
 ---
@@ -87,7 +87,7 @@ The server (`serve.js`) is a plain Node.js HTTP server — no framework, no buil
 
 | Property | Value |
 |---|---|
-| IP | `107.23.227.77` |
+| IP | `54.91.145.63` |
 | Region | `us-east-1` |
 | OS | Amazon Linux 2023 |
 | User | `ec2-user` |
@@ -122,7 +122,7 @@ Output is written to `C:\Users\sachi\deploy_result.txt`.
 ```bash
 ssh -i "C:\Users\sachi\OneDrive\Documents\GitHub\ec2-access.pem" \
     -o StrictHostKeyChecking=no \
-    ec2-user@107.23.227.77
+    ec2-user@54.91.145.63
 ```
 
 > **Note:** Use Git Bash's SSH (`C:\Program Files\Git\usr\bin\ssh.exe`), not Windows OpenSSH — the Windows binary exits with code 255 silently in this environment.
