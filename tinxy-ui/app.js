@@ -179,7 +179,8 @@ function nodeIcon(device, idx) {
 // ── Device grouping config ────────────────────────────────────────────────────
 // Devices whose names appear in a group's `match` array are merged into one card.
 const DEVICE_GROUPS = [
-  { groupName: 'Sachin Room', match: ['Sachin Room', 'Laptop'] },
+  { groupName: 'Sachin Room', match: ['Sachin Room', 'Laptop', 'AC', 'Gyser'] },
+  { groupName: 'Living Room', match: ['Living Room'] },
 ];
 
 async function loadDevices() {
@@ -239,8 +240,7 @@ function buildDeviceCard(device) {
 
   card.dataset.deviceId = device._id;
   card.querySelector('.device-name').textContent = device.name || 'Unnamed Device';
-  card.querySelector('.device-type').textContent =
-    device.typeId?.long_name || device.typeId?.name || 'Switch';
+  card.querySelector('.device-type').textContent = '';
 
   const badge       = card.querySelector('.device-badge');
   badge.textContent = '…';
@@ -278,8 +278,7 @@ function buildGroupedCard(groupName, deviceList) {
   const card = frag.querySelector('.device-card');
 
   card.querySelector('.device-name').textContent = groupName;
-  card.querySelector('.device-type').textContent =
-    deviceList.map(d => d.typeId?.long_name || d.typeId?.name || 'Switch').join(' · ');
+  card.querySelector('.device-type').textContent = '';
 
   const badge = card.querySelector('.device-badge');
   badge.textContent = '…';
