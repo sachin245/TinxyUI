@@ -1,0 +1,27 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: SSH deploy to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2.pem
+          chmod 600 ~/.ssh/ec2.pem
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Pull latest code and restart app
+        run: |
+          ssh -i ~/.ssh/ec2.pem ec2-user@${{ secrets.EC2_HOST }} << 'EOF'
+            set -e
+            cd /home/ec2-user/TinxyUI
+            git pull origin main
+            pm2 restart tinxy-ui
+          EOF
