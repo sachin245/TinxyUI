@@ -1,0 +1,27 @@
+name: Deploy to Raspberry Pi
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Pull and restart on Pi
+    runs-on: [self-hosted, linux, ARM64, connect-pi]
+
+    steps:
+      - name: Pull latest code and restart app
+        run: |
+          set -e
+          cd ~/TinxyUI
+          git fetch origin main
+          git reset --hard origin/main
+          pm2 restart tinxy-ui
+          pm2 save
+
+      - name: Health check
+        run: |
+          sleep 2
+          curl -fsS -o /dev/null -w "HTTP %{http_code}\n" http://localhost:6001/ \
+            || (pm2 logs tinxy-ui --lines 50 --nostream && exit 1)
