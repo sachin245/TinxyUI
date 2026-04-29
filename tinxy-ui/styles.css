@@ -412,8 +412,11 @@ html, body {
 /* ── Devices Grid ─────────────────────────────────────────── */
 .devices-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(290px, 320px));
   gap: 1.1rem;
+  justify-content: center;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 /* ── Device Card ──────────────────────────────────────────── */
@@ -447,16 +450,19 @@ html, body {
 
 .device-header {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 1rem;
   gap: .5rem;
+  text-align: center;
 }
 
 .device-info {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: .8rem;
+  gap: .4rem;
   min-width: 0;
 }
 
@@ -536,7 +542,8 @@ html, body {
 .node-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 1rem;
   background: var(--surface2);
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);

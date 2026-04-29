@@ -77,6 +77,15 @@ function parseIsOn(state) {
   return state === 1 || state === true;
 }
 
+async function fetchInitialState(deviceId, nodeNumber, onSuccess, onError) {
+  try {
+    const data = await tinxyFetch(`/v2/devices/${deviceId}/state?deviceNumber=${nodeNumber}`);
+    onSuccess(data);
+  } catch {
+    onError?.();
+  }
+}
+
 // ── Status bar ────────────────────────────────────────────────────────────────
 function showStatus(msg, ms = 3500) {
   statusMsg.textContent = msg;
@@ -167,11 +176,9 @@ function isFanNode(device, idx) {
 
 function nodeIcon(device, idx) {
   const dtype = (device.deviceTypes?.[idx] ?? '').toLowerCase();
-  if (dtype.includes('fan'))                              return '🌀';
-  if (dtype.includes('tubelight') || dtype.includes('tube')) return '💡';
-  if (dtype.includes('led') || dtype.includes('bulb'))    return '💡';
-  if (dtype.includes('socket'))                           return '🔌';
-  if (dtype.includes('heater'))                           return '🔆';
+  if (dtype.includes('fan'))     return '🌀';
+  if (dtype.includes('socket'))  return '🔌';
+  if (dtype.includes('heater'))  return '🔆';
   return '💡';
 }
 
@@ -181,6 +188,7 @@ function nodeIcon(device, idx) {
 const DEVICE_GROUPS = [
   { groupName: 'Sachin Room', match: ['Sachin Room', 'Laptop', 'AC', 'Gyser'] },
   { groupName: 'Living Room', match: ['Living Room'] },
+  { groupName: 'GF Motor & FF AC', match: ['GF motor', 'FF AC'] },
 ];
 
 async function loadDevices() {
@@ -353,18 +361,8 @@ function buildSwitchRow(device, idx, nodeStates, refreshCard) {
     refreshCard();
   }
 
-  // Register for polling
-  registerNode(device._id, idx + 1, (newIsOn) => applyState(newIsOn));
-
-  // Initial fetch
-  (async () => {
-    try {
-      const data = await tinxyFetch(
-        `/v2/devices/${device._id}/state?deviceNumber=${idx + 1}`
-      );
-      applyState(parseIsOn(data.state));
-    } catch { /* leave as off */ }
-  })();
+  registerNode(device._id, idx + 1, applyState);
+  fetchInitialState(device._id, idx + 1, (data) => applyState(parseIsOn(data.state)));
 
   // Toggle click
   toggle.addEventListener('click', async () => {
@@ -445,8 +443,7 @@ function buildFanRow(device, idx, nodeStates, refreshCard) {
     });
   }
 
-  // Register for polling
-  registerNode(device._id, idx + 1, (isOn, brightness) => applyFanState(isOn, brightness));
+  registerNode(device._id, idx + 1, applyFanState);
 
   FAN_SPEEDS.forEach(({ label: spLabel, state, brightness }, i) => {
     const btn = document.createElement('button');
@@ -478,15 +475,12 @@ function buildFanRow(device, idx, nodeStates, refreshCard) {
 
   row.append(info, btns);
 
-  // Initial fetch
-  (async () => {
-    try {
-      const data = await tinxyFetch(
-        `/v2/devices/${device._id}/state?deviceNumber=${idx + 1}`
-      );
-      applyFanState(parseIsOn(data.state), data.brightness ?? 0);
-    } catch { applyFanState(false, 0); }
-  })();
+  fetchInitialState(
+    device._id,
+    idx + 1,
+    (data) => applyFanState(parseIsOn(data.state), data.brightness ?? 0),
+    () => applyFanState(false, 0),
+  );
 
   return row;
 }
@@ -531,6 +525,4 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-(function init() {
-  clearToken();
-})();
+clearToken();

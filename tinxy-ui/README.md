@@ -3,6 +3,7 @@
 A lightweight, zero-dependency web dashboard for controlling [Tinxy](https://tinxy.in) smart home devices — fans, lights, and sockets — from any browser.
 
 **Live (EC2):** http://54.91.145.63
+**Live (Raspberry Pi):** https://connect-pi.local
 **Local dev:** http://localhost:3456
 
 ---
@@ -12,7 +13,8 @@ A lightweight, zero-dependency web dashboard for controlling [Tinxy](https://tin
 - [Overview](#overview)
 - [Features](#features)
 - [Project Structure](#project-structure)
-- [Local Development](#local-development)
+- [Run on localhost](#run-on-localhost)
+- [Deploy on Raspberry Pi](#deploy-on-raspberry-pi)
 - [Deployment (AWS EC2)](#deployment-aws-ec2)
 - [Architecture](#architecture)
 - [API Reference](#api-reference)
@@ -59,12 +61,13 @@ TinxyUI/
 
 ---
 
-## Local Development
+## Run on localhost
 
-**Prerequisites:** Node.js ≥ 18
+**Prerequisites:** Node.js ≥ 18 ([download](https://nodejs.org/))
 
 ```bash
-cd tinxy-ui
+git clone https://github.com/sachin245/TinxyUI.git
+cd TinxyUI/tinxy-ui
 node serve.js
 # → http://localhost:3456
 ```
@@ -75,9 +78,66 @@ Or via npm:
 npm start
 ```
 
+To use a different port:
+
+```bash
+PORT=4000 node serve.js   # macOS/Linux
+$env:PORT=4000; node serve.js   # Windows PowerShell
+```
+
 The server (`serve.js`) is a plain Node.js HTTP server — no framework, no build step. Edit `index.html`, `styles.css`, or `app.js` and hard-refresh the browser.
 
-> **Rule:** Always verify changes locally at http://localhost:3456 before deploying to EC2.
+Open http://localhost:3456, paste your Tinxy Bearer token (Tinxy mobile app → Settings → API Token → Get), and click **Connect**.
+
+> **Rule:** Always verify changes locally before deploying.
+
+---
+
+## Deploy on Raspberry Pi
+
+The Pi (`connect-pi.local`, port `6001`) auto-deploys on every push to `main` via a self-hosted GitHub Actions runner. Full setup details live in [`pi.md`](./pi.md); the short version:
+
+### One-time setup on the Pi
+
+```bash
+# 1. Install Node 20, PM2, nginx
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs nginx
+sudo npm install -g pm2
+
+# 2. Clone repo and start
+cd ~ && git clone https://github.com/sachin245/TinxyUI.git
+cd TinxyUI && pm2 start ecosystem.pi.config.js
+pm2 save && pm2 startup     # follow printed command to enable on reboot
+
+# 3. Install GitHub Actions self-hosted runner (see pi.md for token + steps)
+#    Workflow: .github/workflows/deploy-pi.yml
+```
+
+Configure HTTPS via `mkcert` (recommended for LAN) or Let's Encrypt + nip.io (public IP). nginx config and SSL details are in [`pi.md`](./pi.md).
+
+### Deploy a code change
+
+Just push to `main` — the runner picks up the job, pulls the repo, and restarts PM2:
+
+```bash
+git push origin main
+```
+
+Manual deploy (if the runner is offline):
+
+```bash
+ssh pi@connect-pi.local \
+  "cd ~/TinxyUI && git pull origin main && pm2 restart tinxy-ui"
+```
+
+### Pi PM2 commands
+
+```bash
+pm2 status                   # check process state
+pm2 logs tinxy-ui            # tail logs
+pm2 restart tinxy-ui         # restart
+```
 
 ---
 
