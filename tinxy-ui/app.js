@@ -144,11 +144,13 @@ function switchToTokenScreen() {
   tokenScreen.classList.remove('hidden');
   tokenInput.value = '';
   hideTokenError();
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
 }
 
 function switchToDashboard() {
   tokenScreen.classList.add('hidden');
   dashScreen.classList.remove('hidden');
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   loadDevices();
 }
 
@@ -186,10 +188,15 @@ function nodeIcon(device, idx) {
 // ── Device grouping config ────────────────────────────────────────────────────
 // Devices whose names appear in a group's `match` array are merged into one card.
 const DEVICE_GROUPS = [
-  { groupName: 'Sachin Room', match: ['Sachin Room', 'Laptop', 'AC', 'Gyser'] },
+  { groupName: 'Sachin Room', match: ['Sachin Room', 'Laptop', 'AC', 'Gyser', 'Mac Mini', '🔌 Mac Mini'] },
   { groupName: 'Living Room', match: ['Living Room'] },
   { groupName: 'GF Motor & FF AC', match: ['GF motor', 'FF AC'] },
 ];
+
+function deviceMatchesGroup(deviceName, group) {
+  const normalizedName = deviceName.toLowerCase();
+  return group.match.some(keyword => normalizedName.includes(keyword.toLowerCase()));
+}
 
 async function loadDevices() {
   stopPolling();
@@ -224,7 +231,7 @@ async function loadDevices() {
   const renderedIds = new Set();
 
   for (const group of DEVICE_GROUPS) {
-    const members = devices.filter(d => group.match.includes(d.name || ''));
+    const members = devices.filter(d => deviceMatchesGroup(d.name || '', group));
     if (members.length > 0) {
       members.forEach(d => renderedIds.add(d._id));
       devicesGrid.appendChild(buildGroupedCard(group.groupName, members));

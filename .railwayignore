@@ -1,0 +1,10 @@
+node_modules/
+.git/
+.github/
+.env.local
+.env.*.local
+docs/
+aidlc-rules/
+scripts/
+assets/
+*.md
