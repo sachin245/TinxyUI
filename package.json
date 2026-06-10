@@ -1,0 +1,11 @@
+{
+  "name": "tinxy-ui",
+  "version": "1.0.0",
+  "description": "Dudu Life Control web UI",
+  "scripts": {
+    "start": "node tinxy-ui/serve.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
