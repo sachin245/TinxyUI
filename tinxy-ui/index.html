@@ -2,18 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Dudu Life Control</title>
+  <meta name="description" content="Control your Tinxy smart-home devices — lights, fans, sockets and more — from one dashboard." />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="color-scheme" content="light dark" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Dudu Life" />
 </head>
 <body>
 
-  <!-- Token Setup Screen -->
-  <div id="token-screen" class="screen">
+  <!-- ── Login Screen ─────────────────────────────────────────────────────── -->
+  <div id="login-screen" class="screen">
     <div class="token-card">
       <div class="brand">
         <span class="brand-icon">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <path d="M12 2a7 7 0 0 1 7 7c0 2.65-1.48 4.96-3.67 6.17L15 17H9l-.33-1.83C6.48 13.96 5 11.65 5 9a7 7 0 0 1 7-7z" fill="#f59e0b" stroke="#d97706" stroke-width="1"/>
             <path d="M9 17h6v1.5a.5.5 0 0 1-.5.5h-5a.5.5 0 0 1-.5-.5V17z" fill="#d97706"/>
             <path d="M10.5 19.5h3" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/>
@@ -22,39 +31,50 @@
         <h1>Dudu Life <span>Control</span></h1>
         <p>Enter your Tinxy API token to get started</p>
       </div>
-      <div class="form-group">
-        <label for="token-input">API Token</label>
-        <input
-          id="token-input"
-          type="password"
-          placeholder="Paste your Bearer token here..."
-          autocomplete="off"
-          spellcheck="false"
-        />
-        <small>
-          Get your token from the Tinxy mobile app:
-          Settings &rarr; API Token &rarr; Get
-        </small>
-      </div>
-      <button id="connect-btn" class="btn btn-primary">
-        Connect
-      </button>
-      <div id="token-error" class="error-msg hidden"></div>
+      <form id="login-form" autocomplete="off">
+        <div class="form-group">
+          <label for="token-input">API Token</label>
+          <input
+            id="token-input"
+            name="token"
+            type="password"
+            placeholder="Paste your Bearer token here…"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <small>
+            Get your token from the Tinxy mobile app:
+            Settings &rarr; API Token &rarr; Get. It's saved in this browser,
+            so you only enter it once.
+          </small>
+        </div>
+        <button id="login-btn" type="submit" class="btn btn-primary">
+          Connect
+        </button>
+      </form>
+      <div id="login-error" class="error-msg hidden" role="alert"></div>
     </div>
   </div>
 
-  <!-- Dashboard Screen -->
+  <!-- ── Dashboard Screen ─────────────────────────────────────────────────── -->
   <div id="dashboard-screen" class="screen hidden">
     <header class="topbar">
       <div class="topbar-left">
         <span class="brand-dot"></span>
         <span class="topbar-title">Dudu Life Control</span>
-        <span id="live-badge" class="live-badge hidden">
+        <span id="live-badge" class="live-badge hidden" title="Live polling active">
           <span class="live-pulse"></span>LIVE
         </span>
       </div>
       <div class="topbar-right">
-        <button id="refresh-btn" class="btn btn-icon" title="Refresh devices">
+        <span id="last-updated" class="last-updated" aria-live="off"></span>
+        <button id="all-off-btn" class="btn btn-outline-sm" title="Turn every device off">
+          ⏻ All Off
+        </button>
+        <button id="settings-btn" class="btn btn-icon" title="Edit device groups" aria-label="Settings">
+          &#9881;
+        </button>
+        <button id="refresh-btn" class="btn btn-icon" title="Refresh devices" aria-label="Refresh devices">
           &#8635;
         </button>
         <button id="logout-btn" class="btn btn-outline-sm">
@@ -63,31 +83,52 @@
       </div>
     </header>
 
-    <!-- Action Notification Overlay -->
-    <div id="status-bar" class="status-bar hidden">
+    <!-- Action notification overlay -->
+    <div id="status-bar" class="status-bar hidden" role="status" aria-live="polite">
       <span id="status-msg"></span>
     </div>
 
     <main class="dashboard">
-      <!-- Loading State -->
       <div id="loading-state" class="loading-state hidden">
         <div class="spinner"></div>
-        <p>Fetching devices...</p>
+        <p>Fetching devices…</p>
       </div>
 
-      <!-- Error State -->
       <div id="error-state" class="error-state hidden">
         <div class="error-icon">⚠️</div>
         <p id="error-text"></p>
         <button id="retry-btn" class="btn btn-primary">Retry</button>
       </div>
 
-      <!-- Devices Grid -->
       <div id="devices-grid" class="devices-grid hidden"></div>
     </main>
   </div>
 
-  <!-- Device Card Template -->
+  <!-- ── Settings Modal (device groups) ───────────────────────────────────── -->
+  <div id="settings-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="settings-title">Device Groups</h2>
+        <button id="settings-close-btn" class="btn btn-icon" aria-label="Close settings">&times;</button>
+      </div>
+      <p class="modal-hint">
+        Devices whose names match a group are merged into one card. Names are matched
+        exactly (case-insensitive). Separate multiple names with commas.
+      </p>
+      <div id="known-devices" class="known-devices"></div>
+      <div id="groups-editor" class="groups-editor"></div>
+      <button id="add-group-btn" class="btn btn-outline-sm add-group-btn">+ Add group</button>
+      <div class="modal-actions">
+        <button id="settings-reset-btn" class="btn btn-outline-sm">Reset to defaults</button>
+        <div class="modal-actions-right">
+          <button id="settings-cancel-btn" class="btn btn-outline-sm">Cancel</button>
+          <button id="settings-save-btn" class="btn btn-primary">Save &amp; reload</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Templates ────────────────────────────────────────────────────────── -->
   <template id="device-card-tpl">
     <div class="device-card">
       <div class="device-header">
@@ -100,20 +141,23 @@
             <span class="device-type"></span>
           </div>
         </div>
-        <span class="device-badge"></span>
+        <div class="device-header-right">
+          <span class="device-badge"></span>
+          <button class="card-master" type="button" title="Toggle all in this card" aria-label="Toggle all devices in this card">⏻</button>
+        </div>
       </div>
       <div class="device-nodes"></div>
     </div>
   </template>
 
-  <!-- Node Row Template -->
   <template id="node-row-tpl">
     <div class="node-row">
       <div class="node-info">
-        <span class="node-label"></span>
         <span class="node-state-dot"></span>
+        <span class="node-label"></span>
+        <span class="node-offline hidden" title="Device unreachable">offline</span>
       </div>
-      <button class="toggle-btn" aria-label="Toggle device">
+      <button class="toggle-btn" type="button" role="switch" aria-checked="false" aria-label="Toggle device">
         <span class="toggle-knob"></span>
       </button>
     </div>

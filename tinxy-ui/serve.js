@@ -1,19 +1,16 @@
 /**
  * Dudu Life Control server
  *
- * Static file server + authenticated proxy to the Tinxy cloud API.
- * The Tinxy bearer token lives ONLY here (env: TINXY_API_TOKEN) — the
- * browser authenticates with a shared password (env: UI_PASSWORD) and
- * gets a signed, HttpOnly session cookie.
+ * Static file server + a thin reverse proxy to the Tinxy cloud API.
+ *
+ * Auth model: the browser holds the user's Tinxy API token (saved in
+ * localStorage) and sends it as `Authorization: Bearer <token>` on every
+ * request. This server simply forwards that header to backend.tinxy.in —
+ * it does not store any token of its own. The proxy exists only to avoid
+ * cross-origin (CORS) issues and to keep a strict `connect-src 'self'` CSP.
  *
  * Env vars:
- *   PORT             listen port                      (default 3456)
- *   TINXY_API_TOKEN  Tinxy bearer token               (required for /api)
- *   UI_PASSWORD      shared dashboard password        (required for login)
- *   SESSION_SECRET   HMAC key for session cookies     (random per boot if unset)
- *
- * Vars can also be placed in a .env file next to this file or at the
- * repo root (KEY=VALUE lines) — handy for the Pi/EC2 PM2 deployments.
+ *   PORT   listen port (default 3456)
  */
 
 'use strict';
@@ -40,18 +37,8 @@ function loadEnvFile(file) {
 loadEnvFile(path.join(BASE, '.env'));
 loadEnvFile(path.join(BASE, '..', '.env'));
 
-const PORT           = process.env.PORT || 3456;
-const TINXY_BASE     = 'https://backend.tinxy.in';
-const API_TOKEN      = process.env.TINXY_API_TOKEN || '';
-const UI_PASSWORD    = process.env.UI_PASSWORD || '';
-const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
-const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-const COOKIE_NAME    = 'tinxy_session';
-
-if (!API_TOKEN)   console.warn('[warn] TINXY_API_TOKEN not set — /api proxy disabled');
-if (!UI_PASSWORD) console.warn('[warn] UI_PASSWORD not set — login disabled');
-if (!process.env.SESSION_SECRET)
-  console.warn('[warn] SESSION_SECRET not set — sessions reset on every restart');
+const PORT       = process.env.PORT || 3456;
+const TINXY_BASE = 'https://backend.tinxy.in';
 
 // ── Static file config ────────────────────────────────────────────────────────
 const MIME = {
@@ -93,70 +80,6 @@ function isSecure(req) {
   return req.headers['x-forwarded-proto'] === 'https' || !!req.socket.encrypted;
 }
 
-// ── Session cookies ───────────────────────────────────────────────────────────
-function signExpiry(exp) {
-  return crypto.createHmac('sha256', SESSION_SECRET).update(String(exp)).digest('hex');
-}
-
-function makeSessionCookie(req) {
-  const exp   = Date.now() + SESSION_TTL_MS;
-  const value = `${exp}.${signExpiry(exp)}`;
-  const parts = [
-    `${COOKIE_NAME}=${value}`,
-    'Path=/',
-    'HttpOnly',
-    'SameSite=Strict',
-    `Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`,
-  ];
-  if (isSecure(req)) parts.push('Secure');
-  return parts.join('; ');
-}
-
-function clearSessionCookie() {
-  return `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`;
-}
-
-function hasValidSession(req) {
-  const cookies = req.headers.cookie || '';
-  const match = cookies.split(';').map(c => c.trim()).find(c => c.startsWith(COOKIE_NAME + '='));
-  if (!match) return false;
-  const [expStr, sig] = match.slice(COOKIE_NAME.length + 1).split('.');
-  const exp = Number(expStr);
-  if (!exp || !sig || exp < Date.now()) return false;
-  const expected = signExpiry(exp);
-  return sig.length === expected.length &&
-    crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
-}
-
-function passwordMatches(candidate) {
-  if (!UI_PASSWORD) return false;
-  const a = crypto.createHash('sha256').update(candidate).digest();
-  const b = crypto.createHash('sha256').update(UI_PASSWORD).digest();
-  return crypto.timingSafeEqual(a, b);
-}
-
-// ── Login rate limiting (per IP) ──────────────────────────────────────────────
-const LOGIN_WINDOW_MS  = 15 * 60 * 1000;
-const LOGIN_MAX_TRIES  = 10;
-const loginAttempts    = new Map(); // ip → { count, resetAt }
-
-function loginThrottled(ip) {
-  const now   = Date.now();
-  const entry = loginAttempts.get(ip);
-  if (!entry || entry.resetAt < now) {
-    loginAttempts.set(ip, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
-    return false;
-  }
-  entry.count += 1;
-  return entry.count > LOGIN_MAX_TRIES;
-}
-
-function clientIp(req) {
-  const fwd = req.headers['x-forwarded-for'];
-  if (fwd) return fwd.split(',')[0].trim();
-  return req.socket.remoteAddress || 'unknown';
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function sendJson(req, res, status, obj, extraHeaders = {}) {
   const body = JSON.stringify(obj);
@@ -184,11 +107,16 @@ function readBody(req, limit = 64 * 1024) {
 }
 
 // ── Tinxy API proxy ───────────────────────────────────────────────────────────
+// Forwards the client's own Authorization header to Tinxy. The server holds no
+// token; an absent/invalid token simply yields Tinxy's own 401/403 response.
 async function handleApiProxy(req, res, pathname, search) {
-  if (!hasValidSession(req)) { sendJson(req, res, 401, { error: 'Not logged in' }); return; }
-  if (!API_TOKEN)            { sendJson(req, res, 503, { error: 'Server missing TINXY_API_TOKEN' }); return; }
   if (req.method !== 'GET' && req.method !== 'POST') {
     sendJson(req, res, 405, { error: 'Method not allowed' }); return;
+  }
+
+  const auth = req.headers['authorization'] || '';
+  if (!/^Bearer\s+.+/i.test(auth)) {
+    sendJson(req, res, 401, { error: 'Missing API token' }); return;
   }
 
   const upstreamPath = pathname.slice('/api'.length);
@@ -209,7 +137,7 @@ async function handleApiProxy(req, res, pathname, search) {
       method: req.method,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_TOKEN}`,
+        'Authorization': auth,
       },
       body,
       signal: controller.signal,
@@ -227,40 +155,6 @@ async function handleApiProxy(req, res, pathname, search) {
   } finally {
     clearTimeout(timer);
   }
-}
-
-// ── Auth endpoints ────────────────────────────────────────────────────────────
-async function handleAuth(req, res, pathname) {
-  if (pathname === '/auth/check' && req.method === 'GET') {
-    if (hasValidSession(req)) sendJson(req, res, 200, { ok: true });
-    else sendJson(req, res, 401, { error: 'Not logged in' });
-    return;
-  }
-
-  if (pathname === '/auth/login' && req.method === 'POST') {
-    if (!UI_PASSWORD) { sendJson(req, res, 503, { error: 'Server missing UI_PASSWORD' }); return; }
-    if (loginThrottled(clientIp(req))) {
-      sendJson(req, res, 429, { error: 'Too many attempts — try again in a few minutes' });
-      return;
-    }
-    let password = '';
-    try { password = String(JSON.parse(await readBody(req)).password ?? ''); }
-    catch { sendJson(req, res, 400, { error: 'Invalid request' }); return; }
-
-    if (!passwordMatches(password)) {
-      sendJson(req, res, 401, { error: 'Incorrect password' });
-      return;
-    }
-    sendJson(req, res, 200, { ok: true }, { 'Set-Cookie': makeSessionCookie(req) });
-    return;
-  }
-
-  if (pathname === '/auth/logout' && req.method === 'POST') {
-    sendJson(req, res, 200, { ok: true }, { 'Set-Cookie': clearSessionCookie() });
-    return;
-  }
-
-  sendJson(req, res, 404, { error: 'Not found' });
 }
 
 // ── Static files ──────────────────────────────────────────────────────────────
@@ -328,7 +222,6 @@ http.createServer((req, res) => {
   }
 
   if (pathname === '/healthz') { sendJson(req, res, 200, { ok: true }); return; }
-  if (pathname.startsWith('/auth/')) { handleAuth(req, res, pathname); return; }
-  if (pathname.startsWith('/api/'))  { handleApiProxy(req, res, pathname, search); return; }
+  if (pathname.startsWith('/api/')) { handleApiProxy(req, res, pathname, search); return; }
   handleStatic(req, res, pathname);
 }).listen(PORT, () => console.log(`Dudu Life Control running on http://localhost:${PORT}`));

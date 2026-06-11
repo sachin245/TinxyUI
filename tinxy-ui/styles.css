@@ -71,8 +71,8 @@ html, body {
 .screen { min-height: 100vh; }
 .hidden { display: none !important; }
 
-/* ── Token Setup Screen ───────────────────────────────────── */
-#token-screen {
+/* ── Login Screen ─────────────────────────────────────────── */
+#login-screen {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -701,11 +701,207 @@ html, body {
 .empty-state p { margin-top: .6rem; font-size: .88rem; }
 .empty-state-icon { font-size: 2rem; }
 
+/* ── Last updated ─────────────────────────────────────────── */
+.last-updated {
+  font-size: .72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-right: .2rem;
+}
+
+/* ── Card header right (badge + master) ───────────────────── */
+.device-header-right {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.card-master {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-size: .9rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .18s;
+  flex-shrink: 0;
+}
+.card-master:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.card-master.on    { background: var(--on-color); border-color: var(--on-color); color: #fff; }
+.card-master.loading { opacity: .5; cursor: wait; }
+
+/* ── Offline node indicator ───────────────────────────────── */
+.node-offline {
+  font-size: .62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--off-color);
+  background: var(--off-bg);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: .05rem .4rem;
+}
+.node-row.node-offline-state { opacity: .65; }
+
+/* ── Settings Modal ───────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15, 23, 42, .45);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+.modal-overlay.hidden { display: none; }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-float);
+  width: 100%;
+  max-width: 560px;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 1.5rem;
+  animation: notif-in .2s cubic-bezier(.34,1.3,.64,1) both;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .4rem;
+}
+.modal-header h2 { font-size: 1.15rem; font-weight: 800; letter-spacing: -.02em; }
+
+.modal-hint { font-size: .8rem; color: var(--text-muted); line-height: 1.5; margin-bottom: .8rem; }
+
+.known-devices {
+  font-size: .76rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  align-items: center;
+}
+.known-label { font-weight: 700; }
+.known-chip {
+  font-size: .72rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: .12rem .55rem;
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: all .15s;
+}
+.known-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+.groups-editor { display: flex; flex-direction: column; gap: .55rem; margin-bottom: .75rem; }
+
+.group-row { display: flex; gap: .5rem; align-items: center; }
+.group-row .group-name  { flex: 0 0 32%; }
+.group-row .group-match { flex: 1 1 auto; }
+.group-row input {
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: .82rem;
+  padding: .5rem .7rem;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+  min-width: 0;
+}
+.group-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.group-remove { width: 32px; height: 32px; padding: 0; flex-shrink: 0; }
+
+.add-group-btn { margin-bottom: 1rem; }
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+.modal-actions-right { display: flex; gap: .5rem; }
+.modal-actions .btn-primary { width: auto; padding: .6rem 1.4rem; }
+
 /* ── Responsive ───────────────────────────────────────────── */
 @media (max-width: 520px) {
-  .topbar { padding: .75rem 1rem; }
+  .topbar { padding: .75rem 1rem; gap: .5rem; flex-wrap: wrap; }
+  .topbar-right { gap: .4rem; }
+  .last-updated { display: none; }
   .dashboard { padding: 1.25rem .75rem 2.5rem; }
   .devices-grid { grid-template-columns: 1fr; }
-  .device-name { max-width: 140px; }
+  .device-name { max-width: 180px; }
   .token-card { padding: 2rem 1.5rem; }
+  .group-row { flex-wrap: wrap; }
+  .group-row .group-name, .group-row .group-match { flex: 1 1 100%; }
+}
+
+/* ── Dark mode ────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:          #0e1016;
+    --bg-hero:     linear-gradient(135deg, #14161f 0%, #0e1016 60%, #1a141f 100%);
+    --surface:     #181b24;
+    --surface2:    #1f232e;
+    --surface3:    #262b38;
+    --border:      #2d3340;
+    --border-soft: rgba(255,255,255,.06);
+
+    --accent:      #6d67f0;
+    --accent-light:#867fff;
+    --accent-dim:  rgba(109,103,240,.18);
+    --accent-glow: rgba(109,103,240,.28);
+
+    --on-color:    #fbbf24;
+    --on-bg:       #2a2212;
+    --on-border:   #b45309;
+    --on-glow:     rgba(251,191,36,.18);
+
+    --off-color:   #64748b;
+    --off-bg:      #1f232e;
+
+    --text:        #e7e9f0;
+    --text-sub:    #b6bcce;
+    --text-muted:  #7c869c;
+
+    --danger:      #f87171;
+    --danger-dim:  rgba(248,113,113,.12);
+
+    --shadow-sm:   0 1px 3px rgba(0,0,0,.4);
+    --shadow-card: 0 4px 16px rgba(0,0,0,.35), 0 1px 4px rgba(0,0,0,.3);
+    --shadow-float:0 20px 60px rgba(0,0,0,.55), 0 4px 16px rgba(0,0,0,.4);
+  }
+
+  .topbar { background: rgba(24,27,36,.85); }
+  .form-group input:focus { background: var(--surface3); }
+
+  /* Override the few hardcoded light surfaces. */
+  .device-card.card-on { background: linear-gradient(145deg, #221d12, var(--surface)); box-shadow: var(--shadow-card), 0 0 0 1px #3a2e12, 0 6px 24px var(--on-glow); }
+  .device-card.card-on .device-icon-wrap { background: #2a2212; }
+  .node-row.node-on { background: #221d12; border-color: #3a2e12; }
+  .node-row:hover { background: #232834; }
+  .device-badge.on { background: #2a2212; }
+  .device-badge.loading { background: #2a2512; border-color: #5a4a14; }
+  .toggle-btn { background: #3a4150; }
+  .toggle-knob { background: #e7e9f0; }
+  .status-bar { border-color: #3a3f73; }
+  .modal-overlay { background: rgba(0,0,0,.6); }
 }
