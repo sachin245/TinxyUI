@@ -6,3 +6,7 @@
 .env
 buildspec.yml
 codebuild_build.sh
+
+# Local run logs from start-app.ps1
+tinxy-ui-server.log
+tinxy-ui-server.log.err
